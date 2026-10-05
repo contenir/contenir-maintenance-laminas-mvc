@@ -84,6 +84,21 @@ final class MaintenanceListenerFactoryTest extends TestCase
     }
 
     /**
+     * @return array<string, array{mixed, string}>
+     */
+    public static function sinceProvider(): array
+    {
+        return [
+            'ISO 8601'     => ['2026-01-02T03:04:05+00:00', '2026-01-02T03:04:05+00:00'],
+            'other offset' => ['2026-01-02 13:04:05 +10:00', '2026-01-02T13:04:05+10:00'],
+            'missing'      => [null, ''],
+            'empty string' => ['', ''],
+            'not a string' => [1_767_323_045, ''],
+            'unparseable'  => ['not-a-date', ''],
+        ];
+    }
+
+    /**
      * @return array<string, array{mixed}>
      */
     public static function unusableTemplatePathProvider(): array
@@ -116,18 +131,19 @@ final class MaintenanceListenerFactoryTest extends TestCase
     }
 
     #[Test]
-    public function buildsTheStateFromConfigWhenNoRepositoryIsRegistered(): void
+    #[DataProvider('sinceProvider')]
+    public function buildsTheStateFromConfigWhenNoRepositoryIsRegistered(mixed $since, string $expected): void
     {
         $response = $this->respond([
-            'body_template' => '%s',
+            'body_template' => '%s|%2$s',
             'state'         => [
                 'active'  => true,
                 'message' => 'Down for upgrade',
-                'since'   => '2026-01-02T03:04:05+00:00',
+                'since'   => $since,
             ],
         ]);
 
-        static::assertSame(503, $response?->getStatusCode());
+        static::assertSame("Down for upgrade|{$expected}", $response?->getContent());
     }
 
     #[Test]
@@ -184,17 +200,6 @@ final class MaintenanceListenerFactoryTest extends TestCase
         );
 
         $this->respond(['body_template' => '%s', 'bypass' => 'not a callable string xyz']);
-    }
-
-    #[Test]
-    public function toleratesAnUnparseableSince(): void
-    {
-        $response = $this->respond([
-            'body_template' => '%s',
-            'state'         => ['active' => true, 'message' => 'm', 'since' => 'not-a-date'],
-        ]);
-
-        static::assertSame(503, $response?->getStatusCode());
     }
 
     #[Test]

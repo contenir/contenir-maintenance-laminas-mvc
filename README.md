@@ -109,8 +109,20 @@ A `bypass` that is neither callable nor `null` makes the factory throw a
 
 ### Response body
 
-The body is a `sprintf` format with exactly one `%s`, which receives the
-HTML-escaped message. Any other `%` must be written as `%%`.
+The body is a `sprintf` format. It receives two arguments, and any other `%`
+must be written as `%%`:
+
+| Placeholder | Value |
+| --- | --- |
+| `%s` or `%1$s` | The HTML-escaped message |
+| `%2$s` | `since`, when maintenance started, as ISO 8601 (`2026-05-05T03:14:15+00:00`); an empty string when the state has no `since` or it could not be parsed |
+
+A template that only uses `%s` is unaffected by `since`. To show it:
+
+```php
+'body_template' => '<h1>Down for maintenance</h1><p>%1$s</p>'
+    . '<p>Down since <time datetime="%2$s">%2$s</time></p>',
+```
 
 ```php
 'maintenance' => [

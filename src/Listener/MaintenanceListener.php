@@ -6,6 +6,7 @@ namespace Contenir\Maintenance\Laminas\Mvc\Listener;
 
 use Closure;
 use Contenir\Maintenance\MaintenanceRepositoryInterface;
+use DateTimeInterface;
 use Laminas\Http\Response;
 use Laminas\Mvc\MvcEvent;
 
@@ -23,6 +24,11 @@ use const ENT_QUOTES;
  *   3. Otherwise → build a 503 Response with Retry-After header and the
  *      configured body template (sprintf-style, single %s for message),
  *      attach it to the event, and stop propagation.
+ *
+ * The body template receives two arguments: the HTML-escaped message
+ * (`%s` or `%1$s`) and the `since` time as ISO 8601 (`%2$s`), which is an
+ * empty string when the state has no `since`. A template that only uses
+ * `%s` ignores the second argument.
  *
  * @api
  */
@@ -89,6 +95,7 @@ final readonly class MaintenanceListener
         $response->setContent(sprintf(
             $this->bodyTemplate,
             htmlspecialchars($state->message, ENT_QUOTES, encoding: 'UTF-8'),
+            $state->since?->format(DateTimeInterface::ATOM) ?? '',
         ));
 
         $event->setResponse($response);

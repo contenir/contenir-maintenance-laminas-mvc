@@ -7,6 +7,8 @@ namespace Contenir\Maintenance\Laminas\Mvc\Tests\Unit\Listener;
 use Contenir\Maintenance\Laminas\Mvc\Listener\MaintenanceListener;
 use Contenir\Maintenance\MaintenanceState;
 use Contenir\Maintenance\Repository\InMemoryRepository;
+use DateTimeImmutable;
+use DateTimeZone;
 use Laminas\EventManager\EventManagerInterface;
 use Laminas\Http\Response;
 use Laminas\Mvc\ApplicationInterface;
@@ -104,6 +106,21 @@ final class MaintenanceListenerTest extends TestCase
     }
 
     #[Test]
+    public function passesAnEmptySinceWhenTheStateHasNone(): void
+    {
+        $listener = new MaintenanceListener(
+            repository: new InMemoryRepository(new MaintenanceState(
+                active: true,
+                message: 'Down',
+                since: null,
+            )),
+            bodyTemplate: '<p>%s</p><time datetime="%2$s"></time>',
+        );
+
+        static::assertSame('<p>Down</p><time datetime=""></time>', $listener(new MvcEvent())?->getContent());
+    }
+
+    #[Test]
     public function passesTheEventToTheBypass(): void
     {
         $event    = new MvcEvent();
@@ -120,6 +137,21 @@ final class MaintenanceListenerTest extends TestCase
         $listener($event);
 
         static::assertSame($event, $received);
+    }
+
+    #[Test]
+    public function passesTheSinceTimeToTheTemplateAsIso8601(): void
+    {
+        $since    = new DateTimeImmutable('2026-05-05 13:14:15', new DateTimeZone('Australia/Sydney'));
+        $listener = new MaintenanceListener(
+            repository: new InMemoryRepository(MaintenanceState::active('Down', $since)),
+            bodyTemplate: '<p>%1$s</p><time datetime="%2$s"></time>',
+        );
+
+        static::assertSame(
+            '<p>Down</p><time datetime="2026-05-05T13:14:15+10:00"></time>',
+            $listener(new MvcEvent())?->getContent(),
+        );
     }
 
     #[Test]
