@@ -156,6 +156,7 @@ composer static-analysis   # mago analyze
 composer test              # unit suite: listener, module and factory with test doubles, no I/O
 composer test-integration  # integration suite: template files, bundled view, real service and event managers
 composer test-coverage     # both suites, clover.xml for Codecov
+composer mutation-test     # Infection mutation testing over both suites
 ```
 
 ## License

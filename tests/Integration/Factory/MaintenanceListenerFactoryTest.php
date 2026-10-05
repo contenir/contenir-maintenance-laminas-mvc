@@ -6,6 +6,7 @@ namespace Contenir\Maintenance\Laminas\Mvc\Tests\Integration\Factory;
 
 use Contenir\Maintenance\Laminas\Mvc\Factory\MaintenanceListenerFactory;
 use Contenir\Maintenance\Laminas\Mvc\Tests\TestAsset\Container\InMemoryContainer;
+use Contenir\Maintenance\Laminas\Mvc\Tests\TestAsset\Stream\ThrowingFileStreamWrapper;
 use Contenir\Maintenance\Laminas\Mvc\Tests\TestAsset\Stream\UnopenableFileStreamWrapper;
 use Contenir\Maintenance\Laminas\Mvc\Tests\Trait\TemporaryDirectoryTrait;
 use Contenir\Maintenance\MaintenanceRepositoryInterface;
@@ -21,9 +22,13 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 use function chmod;
+use function error_clear_last;
+use function error_get_last;
 use function file_put_contents;
 use function mkdir;
 use function ob_get_level;
+use function restore_error_handler;
+use function set_error_handler;
 use function sprintf;
 
 /**
@@ -167,6 +172,22 @@ final class MaintenanceListenerFactoryTest extends TestCase
     }
 
     #[Test]
+    public function reportsAnUnopenableTemplateWithoutRaisingAPhpWarning(): void
+    {
+        UnopenableFileStreamWrapper::register();
+        error_clear_last();
+
+        try {
+            $this->respond(['body_template_path' => UnopenableFileStreamWrapper::PROTOCOL . '://template.html']);
+            static::fail('Expected the unreadable template to be reported.');
+        } catch (RuntimeException) {
+            static::assertNull(error_get_last());
+        } finally {
+            UnopenableFileStreamWrapper::unregister();
+        }
+    }
+
+    #[Test]
     public function reportsATemplateThatCannotBeOpenedAfterPassingTheReadabilityChecks(): void
     {
         $path = UnopenableFileStreamWrapper::PROTOCOL . '://template.html';
@@ -181,6 +202,26 @@ final class MaintenanceListenerFactoryTest extends TestCase
             $this->respond(['body_template_path' => $path]);
         } finally {
             UnopenableFileStreamWrapper::unregister();
+        }
+    }
+
+    #[Test]
+    public function restoresThePreviousErrorHandlerWhenReadingATemplateThrows(): void
+    {
+        $previous = static fn(): bool => false;
+        set_error_handler($previous);
+        ThrowingFileStreamWrapper::register();
+
+        try {
+            $this->respond(['body_template_path' => ThrowingFileStreamWrapper::PROTOCOL . '://template.html']);
+            static::fail('Expected the stream exception to propagate.');
+        } catch (RuntimeException $e) {
+            static::assertSame(ThrowingFileStreamWrapper::MESSAGE, $e->getMessage());
+            static::assertSame($previous, set_error_handler(null));
+        } finally {
+            ThrowingFileStreamWrapper::unregister();
+            restore_error_handler();
+            restore_error_handler();
         }
     }
 

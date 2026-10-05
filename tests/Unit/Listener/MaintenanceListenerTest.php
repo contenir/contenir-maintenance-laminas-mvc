@@ -47,6 +47,14 @@ final class MaintenanceListenerTest extends TestCase
     }
 
     #[Test]
+    public function defaultsRetryAfterToTenMinutes(): void
+    {
+        $response = (new MaintenanceListener($this->activeRepository()))(new MvcEvent());
+
+        static::assertSame('Retry-After: 600', $response?->getHeaders()->get('Retry-After')->toString());
+    }
+
+    #[Test]
     public function escapesTheMessageIntoTheTemplate(): void
     {
         $listener = new MaintenanceListener(
