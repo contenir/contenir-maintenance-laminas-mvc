@@ -1,10 +1,22 @@
 # contenir/maintenance-laminas-mvc
 
+[![Continuous Integration](https://github.com/contenir/maintenance-laminas-mvc/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/contenir/maintenance-laminas-mvc/actions/workflows/continuous-integration.yml)
+[![codecov](https://codecov.io/gh/contenir/maintenance-laminas-mvc/graph/badge.svg)](https://codecov.io/gh/contenir/maintenance-laminas-mvc)
+
 Laminas MVC adapter for [`contenir/maintenance`](https://github.com/contenir/maintenance).
 
-When the admin (Contenir CMS) toggles maintenance mode, this adapter
-short-circuits dispatch in the consuming Site with a 503 response — until
-the flag is cleared.
+When the admin (Contenir CMS) toggles maintenance mode, this module
+short-circuits dispatch in the consuming Site with a `503 Service Unavailable`
+response until the flag is cleared.
+
+## Requirements
+
+- PHP 8.3, 8.4 or 8.5
+- `laminas/laminas-mvc` ^3.7
+- `contenir/maintenance` ^0.1 or ^2.0
+
+The 0.x releases, which support PHP 8.1, remain available from the `0.x`
+branch and `v0.*` tags; see [UPGRADE-2.0.md](UPGRADE-2.0.md).
 
 ## Install
 
@@ -12,72 +24,140 @@ the flag is cleared.
 composer require contenir/maintenance-laminas-mvc
 ```
 
-## Wire-up
-
-### 1. Register the module
+With `laminas/laminas-component-installer`, the module is registered for
+you. Otherwise add it to `config/modules.config.php`:
 
 ```php
-// config/modules.config.php
 return [
-    // ...other modules
-    'Contenir\\Maintenance\\Laminas\\Mvc',
+    // ...
+    'Contenir\Maintenance\Laminas\Mvc',
 ];
 ```
 
-If you have `laminas/laminas-component-installer` installed, this happens
-automatically.
+## How it works
 
-### 2. Point at the shared state file
+- `Module::getConfig()` returns `ConfigProvider::__invoke()`, which registers
+  `MaintenanceListenerFactory` for `Listener\MaintenanceListener`.
+- `Module::onBootstrap()` fetches the listener and attaches it to
+  `MvcEvent::EVENT_DISPATCH` at priority `Module::DISPATCH_PRIORITY`
+  (`10000`), ahead of route-to-controller dispatch.
+- When the state is active and no bypass applies, the listener triggers
+  `pagecache.disable` on the application's event manager (so
+  `contenir/cache-laminas-mvc` will not store the page), builds a 503 with
+  `Retry-After` and `Content-Type: text/html; charset=utf-8` headers, sets it
+  on the event and stops propagation.
+
+## Configuration
+
+All keys live under `maintenance` and are optional.
+
+| Key | Default | Meaning |
+| --- | --- | --- |
+| `state` | inactive | `active`, `message`, `since`: the state written by the admin |
+| `retry_after` | `600` | Seconds sent in the `Retry-After` header |
+| `bypass` | `null` | `callable(MvcEvent): bool`; only a `true` return lets the request through |
+| `body_template` | not set | Inline `sprintf` template; wins over `body_template_path` |
+| `body_template_path` | bundled `view/contenir/maintenance/index.phtml` | Template file; `null` or `''` uses a minimal inline page |
+
+### State
+
+The admin writes the state with `Contenir\Maintenance\Repository\FileRepository`
+into a file the Site loads as config, for example
+`config/autoload/maintenance.local.php`:
 
 ```php
-// config/autoload/maintenance.local.php
 return [
     'maintenance' => [
-        // Same path the admin (Contenir CMS) is configured to write.
-        'file' => '/var/www/shared/maintenance.local.php',
+        'state' => [
+            'active'  => true,
+            'message' => 'Back online by 5pm AEST.',
+            'since'   => '2026-05-05T03:14:15+00:00',
+        ],
     ],
 ];
 ```
 
-That's the minimum. With nothing else set, the adapter will return a
-plain 503 page with the configured message whenever maintenance is
-active.
-
-### 3. (Optional) Bypass for operators
+The factory turns `maintenance.state` into an `InMemoryRepository`, so no
+file is read per request. If the Site caches its merged config, the cache
+must be cleared when the state changes. To read the state from another
+source instead, register a service for
+`Contenir\Maintenance\MaintenanceRepositoryInterface`; it always wins:
 
 ```php
-// config/autoload/maintenance.local.php
-return [
-    'maintenance' => [
-        'file'   => '/var/www/shared/maintenance.local.php',
-        'bypass' => static function (\Laminas\Mvc\MvcEvent $event): bool {
-            // Return true to let the request through despite maintenance mode.
-            // E.g. allow authenticated super-admins:
-            $auth = $event->getApplication()->getServiceManager()->get('auth');
-            return $auth->hasIdentity() && $auth->getIdentity()->isSuperAdmin();
-        },
+'service_manager' => [
+    'factories' => [
+        MaintenanceRepositoryInterface::class => static fn(): MaintenanceRepositoryInterface
+            => new FileRepository('/var/www/shared/maintenance.local.php'),
     ],
-];
-```
-
-### 4. (Optional) Customise the response body
-
-```php
-'maintenance' => [
-    'body_template' => file_get_contents(__DIR__ . '/../templates/maintenance.html'),
-    'retry_after'   => 1800, // seconds, sent as Retry-After header
 ],
 ```
 
-`body_template` is a `sprintf` format string with a single `%s` for the
-escaped message text. If you need anything more elaborate (full layout,
-view helpers, translation), replace the `MaintenanceListener` service
-with your own factory.
+### Bypass for operators
 
-## Listener priority
+```php
+'maintenance' => [
+    'bypass' => static function (\Laminas\Mvc\MvcEvent $event): bool {
+        $auth = $event->getApplication()->getServiceManager()->get('auth');
 
-The listener attaches at `MvcEvent::EVENT_DISPATCH` priority `10000` so
-it runs before route → controller dispatch and before any other listener
-that hasn't asked for higher priority. The exact value is exposed as
-`Module::DISPATCH_PRIORITY` if you need to coordinate with another
-listener.
+        return $auth->hasIdentity() && $auth->getIdentity()->isSuperAdmin();
+    },
+],
+```
+
+A `bypass` that is neither callable nor `null` makes the factory throw a
+`RuntimeException`.
+
+### Response body
+
+The body is a `sprintf` format with exactly one `%s`, which receives the
+HTML-escaped message. Any other `%` must be written as `%%`.
+
+```php
+'maintenance' => [
+    // A file: .phtml and .php are included once when the listener is built,
+    // so they may contain PHP; any other extension is read verbatim.
+    'body_template_path' => __DIR__ . '/../../view/maintenance.phtml',
+
+    // Or an inline string, which wins over body_template_path:
+    'body_template' => '<h1>Down for maintenance</h1><p>%s</p>',
+
+    'retry_after' => 1800,
+],
+```
+
+A `body_template_path` that is not a readable file makes the factory throw a
+`RuntimeException`. The bundled template is self-contained (inline CSS, no
+layout) so it renders even when the Site's assets are unavailable.
+
+For anything more elaborate (layouts, view helpers, translation), replace the
+`MaintenanceListener` service with your own factory. The listener's
+constructor is
+`new MaintenanceListener(MaintenanceRepositoryInterface $repository, int $retryAfter = 600, string $bodyTemplate = MaintenanceListener::DEFAULT_BODY_TEMPLATE, ?callable $bypass = null)`.
+
+## Public API
+
+| Symbol | Purpose |
+| --- | --- |
+| `Module` | `getConfig()`, `onBootstrap(MvcEvent)`, `attachListener(EventManagerInterface, MaintenanceListener)`, `DISPATCH_PRIORITY` |
+| `ConfigProvider` | `__invoke()`, `getDependencies()`, `getMaintenanceDefaults()`, `defaultBodyTemplatePath()`, `DEFAULT_BODY_TEMPLATE` |
+| `Factory\MaintenanceListenerFactory` | `__invoke(ContainerInterface): MaintenanceListener` |
+| `Listener\MaintenanceListener` | `__invoke(MvcEvent): ?Response`, `DEFAULT_BODY_TEMPLATE` |
+
+## Development
+
+The QA toolchain is [php-db/phpdb-qa-tools](https://github.com/php-db/phpdb-qa-tools).
+[Mago](https://mago.carthage.software/) is a standalone binary, installed
+separately (`brew install mago`).
+
+```bash
+composer check             # everything below
+composer cs-check          # mago format --check && mago lint
+composer static-analysis   # mago analyze
+composer test              # unit suite: listener, module and factory with test doubles, no I/O
+composer test-integration  # integration suite: template files, bundled view, real service and event managers
+composer test-coverage     # both suites, clover.xml for Codecov
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
