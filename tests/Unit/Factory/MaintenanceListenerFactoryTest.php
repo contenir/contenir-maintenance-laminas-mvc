@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Maintenance\Laminas\Mvc\Tests\Unit\Factory;
 
+use ArrayObject;
 use Contenir\Maintenance\Laminas\Mvc\ConfigProvider;
 use Contenir\Maintenance\Laminas\Mvc\Factory\MaintenanceListenerFactory;
 use Contenir\Maintenance\Laminas\Mvc\Tests\TestAsset\Container\InMemoryContainer;
@@ -35,11 +36,12 @@ final class MaintenanceListenerFactoryTest extends TestCase
     public static function inactiveStateProvider(): array
     {
         return [
-            'state missing'       => [null],
-            'state not an array'  => ['on'],
-            'active flag missing' => [['message' => 'm']],
-            'active flag false'   => [['active' => false, 'message' => 'lingering']],
-            'active flag zero'    => [['active' => 0]],
+            'state missing'                  => [null],
+            'state not an array'             => ['on'],
+            'active flag missing'            => [['message' => 'm']],
+            'active flag false'              => [['active' => false, 'message' => 'lingering']],
+            'active flag zero'               => [['active' => 0]],
+            'state is an ArrayAccess object' => [new ArrayObject(['active' => true, 'message' => 'm'])],
         ];
     }
 

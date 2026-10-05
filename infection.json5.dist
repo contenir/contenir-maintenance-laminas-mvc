@@ -1,0 +1,28 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": {
+        "directories": ["src"]
+    },
+    "timeout": 10,
+    "threads": "max",
+    "logs": {
+        "text": "infection.log",
+        "summary": "summary.log",
+        "stryker": {
+            "badge": "/^(main|master)$/"
+        }
+    },
+    "mutators": {
+        "@default": true,
+        // parseSince() feeds MaintenanceState::$since into an InMemoryRepository
+        // the factory builds privately; MaintenanceListener never reads `since`,
+        // so no public behaviour depends on whether it was parsed.
+        "Identical": {
+            "ignore": ["Contenir\\Maintenance\\Laminas\\Mvc\\Factory\\MaintenanceListenerFactory::parseSince"]
+        },
+        "NewObject": {
+            "ignore": ["Contenir\\Maintenance\\Laminas\\Mvc\\Factory\\MaintenanceListenerFactory::parseSince"]
+        }
+    },
+    "staticAnalysisTool": "mago"
+}
