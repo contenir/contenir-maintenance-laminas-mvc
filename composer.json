@@ -1,11 +1,11 @@
 {
-  "name": "contenir/maintenance-laminas-mvc",
-  "description": "Laminas MVC adapter for contenir/maintenance — short-circuits dispatch with 503 when maintenance mode is active.",
+  "name": "contenir/contenir-maintenance-laminas-mvc",
+  "description": "Laminas MVC adapter for contenir/contenir-maintenance — short-circuits dispatch with 503 when maintenance mode is active.",
   "type": "library",
   "license": "MIT",
   "require": {
     "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
-    "contenir/maintenance": "^0.1 || ^2.0",
+    "contenir/contenir-maintenance": "^2.1",
     "laminas/laminas-eventmanager": "^3.13",
     "laminas/laminas-http": "^2.19",
     "laminas/laminas-mvc": "^3.7",
@@ -16,6 +16,9 @@
     "infection/infection": "^0.34.1",
     "php-db/phpdb-qa-tools": "0.1.x-dev",
     "phpunit/phpunit": "^11.5.42"
+  },
+  "replace": {
+    "contenir/maintenance-laminas-mvc": "self.version"
   },
   "autoload": {
     "psr-4": {
@@ -60,7 +63,7 @@
   },
   "extra": {
     "branch-alias": {
-      "dev-main": "2.1.x-dev"
+      "dev-main": "2.2.x-dev"
     },
     "laminas": {
       "module": "Contenir\\Maintenance\\Laminas\\Mvc"

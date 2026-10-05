@@ -38,7 +38,7 @@ final readonly class MaintenanceListener
 
     /**
      * Event name used to signal page-cache opt-out. Matches the
-     * EVENT_DISABLE constant published by contenir/cache-laminas-mvc.
+     * EVENT_DISABLE constant published by contenir/contenir-cache-laminas-mvc.
      * Hardcoded here so this package doesn't take a hard dependency on
      * the cache adapter; if cache-laminas-mvc isn't installed, firing
      * the event is a harmless no-op.
