@@ -75,3 +75,21 @@ build the listener through it are unaffected.
 
 Projects that must stay on PHP 8.1 or 8.2 can keep using `^0.3`, which is
 maintained on the `0.x` branch.
+
+## Package renamed in 2.2
+
+From 2.2, the package is published as
+`contenir/contenir-maintenance-laminas-mvc`. It declares `replace` for
+`contenir/maintenance-laminas-mvc`, so the two can never be installed
+together. Switch the requirement:
+
+```bash
+composer remove contenir/maintenance-laminas-mvc && composer require contenir/contenir-maintenance-laminas-mvc:^2.2
+```
+
+2.2 also requires `contenir/contenir-maintenance` `^2.1` (the renamed
+`contenir/maintenance`) instead of `contenir/maintenance`. If you require
+`contenir/maintenance` directly, switch that requirement as well.
+
+No code changes are needed: namespaces, classes, the module name and the
+bundled template path are unchanged.

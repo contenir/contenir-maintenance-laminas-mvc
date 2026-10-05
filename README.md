@@ -1,9 +1,11 @@
-# contenir/maintenance-laminas-mvc
+# contenir/contenir-maintenance-laminas-mvc
 
-[![Continuous Integration](https://github.com/contenir/maintenance-laminas-mvc/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/contenir/maintenance-laminas-mvc/actions/workflows/continuous-integration.yml)
-[![codecov](https://codecov.io/gh/contenir/maintenance-laminas-mvc/graph/badge.svg)](https://codecov.io/gh/contenir/maintenance-laminas-mvc)
+Formerly `contenir/maintenance-laminas-mvc`; the old package is abandoned in favour of this one.
 
-Laminas MVC adapter for [`contenir/maintenance`](https://github.com/contenir/maintenance).
+[![Continuous Integration](https://github.com/contenir/contenir-maintenance-laminas-mvc/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/contenir/contenir-maintenance-laminas-mvc/actions/workflows/continuous-integration.yml)
+[![codecov](https://codecov.io/gh/contenir/contenir-maintenance-laminas-mvc/graph/badge.svg)](https://codecov.io/gh/contenir/contenir-maintenance-laminas-mvc)
+
+Laminas MVC adapter for [`contenir/contenir-maintenance`](https://github.com/contenir/contenir-maintenance).
 
 When the admin (Contenir CMS) toggles maintenance mode, this module
 short-circuits dispatch in the consuming Site with a `503 Service Unavailable`
@@ -13,7 +15,7 @@ response until the flag is cleared.
 
 - PHP 8.3, 8.4 or 8.5
 - `laminas/laminas-mvc` ^3.7
-- `contenir/maintenance` ^0.1 or ^2.0
+- `contenir/contenir-maintenance` ^2.1
 
 The 0.x releases, which support PHP 8.1, remain available from the `0.x`
 branch and `v0.*` tags; see [UPGRADE-2.0.md](UPGRADE-2.0.md).
@@ -21,7 +23,7 @@ branch and `v0.*` tags; see [UPGRADE-2.0.md](UPGRADE-2.0.md).
 ## Install
 
 ```bash
-composer require contenir/maintenance-laminas-mvc
+composer require contenir/contenir-maintenance-laminas-mvc
 ```
 
 With `laminas/laminas-component-installer`, the module is registered for
@@ -43,9 +45,10 @@ return [
   (`10000`), ahead of route-to-controller dispatch.
 - When the state is active and no bypass applies, the listener triggers
   `pagecache.disable` on the application's event manager (so
-  `contenir/cache-laminas-mvc` will not store the page), builds a 503 with
-  `Retry-After` and `Content-Type: text/html; charset=utf-8` headers, sets it
-  on the event and stops propagation.
+  [`contenir/contenir-cache-laminas-mvc`](https://github.com/contenir/contenir-cache-laminas-mvc)
+  will not store the page), builds a 503 with `Retry-After` and
+  `Content-Type: text/html; charset=utf-8` headers, sets it on the event and
+  stops propagation.
 
 ## Configuration
 
