@@ -12,6 +12,8 @@ shared by all Contenir 2.x packages. Configuration is unchanged. See
 
 ### Changed
 
+- `LICENSE` names Contenir as the copyright holder, in line with the other
+  Contenir packages, and uses the standard MIT wording.
 - Requires PHP 8.3, 8.4 or 8.5. PHP 8.1 and 8.2 are no longer supported.
 - Requires `contenir/maintenance` ^0.1 or ^2.0, `laminas/laminas-mvc` ^3.7,
   `laminas/laminas-eventmanager` ^3.13, `laminas/laminas-http` ^2.19,
