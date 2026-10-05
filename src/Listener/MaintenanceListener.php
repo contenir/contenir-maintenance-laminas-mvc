@@ -4,9 +4,15 @@ declare(strict_types=1);
 
 namespace Contenir\Maintenance\Laminas\Mvc\Listener;
 
+use Closure;
 use Contenir\Maintenance\MaintenanceRepositoryInterface;
 use Laminas\Http\Response;
 use Laminas\Mvc\MvcEvent;
+
+use function htmlspecialchars;
+use function sprintf;
+
+use const ENT_QUOTES;
 
 /**
  * Short-circuits dispatch with a 503 response when maintenance mode is active.
@@ -17,11 +23,12 @@ use Laminas\Mvc\MvcEvent;
  *   3. Otherwise → build a 503 Response with Retry-After header and the
  *      configured body template (sprintf-style, single %s for message),
  *      attach it to the event, and stop propagation.
+ *
+ * @api
  */
-final class MaintenanceListener
+final readonly class MaintenanceListener
 {
-    public const DEFAULT_BODY_TEMPLATE
-        = '<!doctype html><title>503</title><h1>Service Unavailable</h1><p>%s</p>';
+    public const string DEFAULT_BODY_TEMPLATE = '<!doctype html><title>503</title><h1>Service Unavailable</h1><p>%s</p>';
 
     /**
      * Event name used to signal page-cache opt-out. Matches the
@@ -30,43 +37,28 @@ final class MaintenanceListener
      * the cache adapter; if cache-laminas-mvc isn't installed, firing
      * the event is a harmless no-op.
      */
-    private const PAGECACHE_DISABLE_EVENT = 'pagecache.disable';
+    private const string PAGECACHE_DISABLE_EVENT = 'pagecache.disable';
 
     /**
-     * @param (callable(MvcEvent): bool)|null $bypass
+     * Only a `true` return lets the request through.
+     */
+    private ?Closure $bypass;
+
+    /**
+     * @param callable|null $bypass Called with the MvcEvent; only a `true` return lets the request through.
      */
     public function __construct(
-        private readonly MaintenanceRepositoryInterface $repository,
-        private readonly int $retryAfter = 600,
-        private readonly string $bodyTemplate = self::DEFAULT_BODY_TEMPLATE,
-        private $bypass = null,
+        private MaintenanceRepositoryInterface $repository,
+        private int $retryAfter = 600,
+        private string $bodyTemplate = self::DEFAULT_BODY_TEMPLATE,
+        ?callable $bypass = null,
     ) {
+        $this->bypass = null === $bypass ? null : $bypass(...);
     }
 
-    public function __invoke(MvcEvent $event): ?Response
+    private function bypassed(MvcEvent $event): bool
     {
-        $state = $this->repository->get();
-
-        if (! $state->active) {
-            return null;
-        }
-
-        if ($this->bypass !== null && ($this->bypass)($event) === true) {
-            return null;
-        }
-
-        $this->disablePageCache($event);
-
-        $response = new Response();
-        $response->setStatusCode(503);
-        $response->getHeaders()->addHeaderLine('Retry-After', (string) $this->retryAfter);
-        $response->getHeaders()->addHeaderLine('Content-Type', 'text/html; charset=utf-8');
-        $response->setContent(sprintf($this->bodyTemplate, htmlspecialchars($state->message, ENT_QUOTES, 'UTF-8')));
-
-        $event->setResponse($response);
-        $event->stopPropagation(true);
-
-        return $response;
+        return null !== $this->bypass && true === ($this->bypass)($event);
     }
 
     /**
@@ -78,5 +70,30 @@ final class MaintenanceListener
     private function disablePageCache(MvcEvent $event): void
     {
         $event->getApplication()?->getEventManager()->trigger(self::PAGECACHE_DISABLE_EVENT);
+    }
+
+    public function __invoke(MvcEvent $event): ?Response
+    {
+        $state = $this->repository->get();
+
+        if (! $state->active || $this->bypassed($event)) {
+            return null;
+        }
+
+        $this->disablePageCache($event);
+
+        $response = new Response();
+        $response->setStatusCode(Response::STATUS_CODE_503);
+        $response->getHeaders()->addHeaderLine('Retry-After', (string) $this->retryAfter);
+        $response->getHeaders()->addHeaderLine('Content-Type', 'text/html; charset=utf-8');
+        $response->setContent(sprintf(
+            $this->bodyTemplate,
+            htmlspecialchars($state->message, ENT_QUOTES, encoding: 'UTF-8'),
+        ));
+
+        $event->setResponse($response);
+        $event->stopPropagation(true);
+
+        return $response;
     }
 }

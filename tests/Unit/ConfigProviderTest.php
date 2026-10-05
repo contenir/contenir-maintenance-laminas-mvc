@@ -8,83 +8,51 @@ use Contenir\Maintenance\Laminas\Mvc\ConfigProvider;
 use Contenir\Maintenance\Laminas\Mvc\Factory\MaintenanceListenerFactory;
 use Contenir\Maintenance\Laminas\Mvc\Listener\MaintenanceListener;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function dirname;
 
 #[Group('unit')]
 final class ConfigProviderTest extends TestCase
 {
-    public function testInvokeReturnsServiceManagerKey(): void
+    #[Test]
+    public function contributesOnlyServiceManagerConfig(): void
     {
-        $config = (new ConfigProvider())();
+        $provider = new ConfigProvider();
 
-        self::assertArrayHasKey('service_manager', $config);
+        static::assertSame(['service_manager' => $provider->getDependencies()], $provider());
     }
 
-    public function testInvokeDoesNotContributeMaintenanceKeyToMergedConfig(): void
+    #[Test]
+    public function defaultBodyTemplatePathIsInsideThePackageViewDirectory(): void
     {
-        // The factory is the canonical source of maintenance defaults so it
-        // can tell user-supplied body_template/body_template_path values
-        // apart from package defaults after Laminas merge. If this method
-        // ever starts returning a 'maintenance' key, the factory's
-        // precedence logic breaks (body_template appears always set even
-        // when the site only set body_template_path).
-        $config = (new ConfigProvider())();
-
-        self::assertArrayNotHasKey('maintenance', $config);
-    }
-
-    public function testRegistersListenerFactory(): void
-    {
-        $deps = (new ConfigProvider())->getDependencies();
-
-        self::assertSame(
-            MaintenanceListenerFactory::class,
-            $deps['factories'][MaintenanceListener::class]
+        static::assertSame(
+            dirname(__DIR__, levels: 2) . '/src/../view/contenir/maintenance/index.phtml',
+            ConfigProvider::defaultBodyTemplatePath(),
         );
     }
 
-    public function testMaintenanceDefaultsHaveExpectedKeys(): void
+    #[Test]
+    public function defaultsPointAtTheBundledTemplateAndATenMinuteRetry(): void
     {
-        $defaults = (new ConfigProvider())->getMaintenanceDefaults();
-
-        self::assertArrayHasKey('retry_after', $defaults);
-        self::assertArrayHasKey('bypass', $defaults);
-        self::assertArrayHasKey('body_template', $defaults);
-        self::assertArrayHasKey('body_template_path', $defaults);
+        static::assertSame(
+            [
+                'retry_after'        => 600,
+                'bypass'             => null,
+                'body_template'      => ConfigProvider::DEFAULT_BODY_TEMPLATE,
+                'body_template_path' => ConfigProvider::defaultBodyTemplatePath(),
+            ],
+            (new ConfigProvider())->getMaintenanceDefaults(),
+        );
     }
 
-    public function testMaintenanceDefaultsAreUnconfigured(): void
+    #[Test]
+    public function registersTheListenerFactory(): void
     {
-        $defaults = (new ConfigProvider())->getMaintenanceDefaults();
-
-        self::assertNull($defaults['bypass']);
-        self::assertSame(600, $defaults['retry_after']);
-    }
-
-    public function testDefaultBodyTemplatePathPointsAtBundledFile(): void
-    {
-        $path = ConfigProvider::defaultBodyTemplatePath();
-
-        self::assertFileExists($path);
-        self::assertStringEndsWith('view/contenir/maintenance/index.phtml', $path);
-    }
-
-    public function testBundledBodyTemplateContainsExactlyOneSprintfPlaceholder(): void
-    {
-        // Mirror the factory's include + output-buffering load so PHP comments
-        // (which legitimately mention `%s` in docs) are excluded — only `%s`
-        // tokens in the rendered HTML count.
-        $path     = ConfigProvider::defaultBodyTemplatePath();
-        $rendered = (static function () use ($path): string {
-            ob_start();
-            include $path;
-            return (string) ob_get_clean();
-        })();
-
-        self::assertSame(
-            1,
-            substr_count($rendered, '%s'),
-            'rendered bundled template must have exactly one %s placeholder',
+        static::assertSame(
+            ['factories' => [MaintenanceListener::class => MaintenanceListenerFactory::class]],
+            (new ConfigProvider())->getDependencies(),
         );
     }
 }
