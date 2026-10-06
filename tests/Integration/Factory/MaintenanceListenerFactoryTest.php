@@ -127,7 +127,7 @@ final class MaintenanceListenerFactoryTest extends TestCase
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(
             sprintf(
-                'contenir/maintenance-laminas-mvc: body_template_path "%s" is not readable.',
+                'contenir/contenir-maintenance-laminas-mvc: body_template_path "%s" is not readable.',
                 $this->path('views.html'),
             ),
         );
@@ -142,7 +142,7 @@ final class MaintenanceListenerFactoryTest extends TestCase
 
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(
-            sprintf('contenir/maintenance-laminas-mvc: body_template_path "%s" is not readable.', $path),
+            sprintf('contenir/contenir-maintenance-laminas-mvc: body_template_path "%s" is not readable.', $path),
         );
 
         $this->respond(['body_template_path' => $path]);
@@ -196,7 +196,7 @@ final class MaintenanceListenerFactoryTest extends TestCase
         try {
             $this->expectException(RuntimeException::class);
             $this->expectExceptionMessage(
-                sprintf('contenir/maintenance-laminas-mvc: failed reading body_template_path "%s".', $path),
+                sprintf('contenir/contenir-maintenance-laminas-mvc: failed reading body_template_path "%s".', $path),
             );
 
             $this->respond(['body_template_path' => $path]);

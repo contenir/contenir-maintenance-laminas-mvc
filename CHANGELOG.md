@@ -4,7 +4,7 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.2.0] - Unreleased
+## [2.2.0] - 2026-10-05
 
 ### Changed
 
@@ -15,7 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 - Requires `contenir/contenir-maintenance` `^2.1`, the renamed
   `contenir/maintenance`, in place of `contenir/maintenance` `^0.1 || ^2.0`.
 
-## [2.1.0] - Unreleased
+## [2.1.0] - 2026-10-05
 
 ### Added
 
@@ -25,7 +25,7 @@ adheres to [Semantic Versioning](https://semver.org/).
   ISO 8601, or an empty string when the state has no `since`. Templates that
   only use `%s` render exactly as before.
 
-## [2.0.0] - Unreleased
+## [2.0.0] - 2026-10-05
 
 The major version marks the move to PHP 8.3+ and the php-db QA toolchain
 shared by all Contenir 2.x packages. Configuration is unchanged. See

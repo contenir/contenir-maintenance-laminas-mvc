@@ -52,7 +52,7 @@ final class MaintenanceListenerFactory
     {
         if (! is_file($path) || ! is_readable($path)) {
             throw new RuntimeException(sprintf(
-                'contenir/maintenance-laminas-mvc: body_template_path "%s" is not readable.',
+                'contenir/contenir-maintenance-laminas-mvc: body_template_path "%s" is not readable.',
                 $path,
             ));
         }
@@ -93,7 +93,7 @@ final class MaintenanceListenerFactory
 
         if (false === $content) {
             throw new RuntimeException(sprintf(
-                'contenir/maintenance-laminas-mvc: failed reading body_template_path "%s".',
+                'contenir/contenir-maintenance-laminas-mvc: failed reading body_template_path "%s".',
                 $path,
             ));
         }
@@ -235,7 +235,7 @@ final class MaintenanceListenerFactory
 
         if (null !== $bypass && ! is_callable($bypass)) {
             throw new RuntimeException(
-                'contenir/maintenance-laminas-mvc: config[maintenance][bypass] must be callable or null.',
+                'contenir/contenir-maintenance-laminas-mvc: config[maintenance][bypass] must be callable or null.',
             );
         }
 

@@ -196,7 +196,7 @@ final class MaintenanceListenerFactoryTest extends TestCase
     {
         $this->expectException(RuntimeException::class);
         $this->expectExceptionMessage(
-            'contenir/maintenance-laminas-mvc: config[maintenance][bypass] must be callable or null.',
+            'contenir/contenir-maintenance-laminas-mvc: config[maintenance][bypass] must be callable or null.',
         );
 
         $this->respond(['body_template' => '%s', 'bypass' => 'not a callable string xyz']);
